@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - dev
   pull_request:
 
 permissions:
@@ -13,8 +14,8 @@ permissions:
 env:
   SONAR_HOST_URL: https://sonarcloud.io
   SONAR_ORG: bem92
-  SONAR_BACKEND_PROJECT_KEY: ${{ vars.SONAR_BACKEND_PROJECT_KEY || 'back-bob-app' }}
-  SONAR_FRONTEND_PROJECT_KEY: ${{ vars.SONAR_FRONTEND_PROJECT_KEY || 'front-bob-app' }}
+  SONAR_BACKEND_PROJECT_KEY: ${{ vars.SONAR_BACKEND_PROJECT_KEY || 'back-app' }}
+  SONAR_FRONTEND_PROJECT_KEY: ${{ vars.SONAR_FRONTEND_PROJECT_KEY || 'front-app' }}
 
 jobs:
   backend:

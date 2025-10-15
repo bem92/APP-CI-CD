@@ -86,9 +86,6 @@ jobs:
           else
             lcov=""
           fi
-          if [ -n "$lcov" ]; then
-            lcov="front/${lcov}"
-          fi
           echo "lcov=${lcov}" >> "$GITHUB_OUTPUT"
 
       - name: Sauvegarde des résultats de tests

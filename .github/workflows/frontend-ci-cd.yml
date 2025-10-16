@@ -116,7 +116,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frontend-artifacts
-          path: front
+          path: .
 
       # Configuration pour les Pull Requests
       - name: Configuration des paramètres PR

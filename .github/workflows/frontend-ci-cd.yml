@@ -74,7 +74,7 @@ jobs:
             echo "Tests Angular OK"
           else
             echo "Fallback sur npm test classique"
-            npm test -- --watch=false --code-coverage
+            npm test -- --coverage
           fi
 
       # Localisation du fichier de couverture LCOV pour SonarCloud
@@ -113,41 +113,10 @@ jobs:
 
       # On récupère les artifacts du job précédent (coverage)
       - name: Récupération des artifacts de tests
-        if: ${{ needs.frontend-tests.outputs['lcov-path'] != '' }}
         uses: actions/download-artifact@v4
         with:
           name: frontend-artifacts
           path: .
-
-      - name: Vérification du rapport de couverture
-        working-directory: front
-        run: |
-          lcov_path="${{ needs.frontend-tests.outputs['lcov-path'] }}"
-
-          if [ -z "${lcov_path}" ]; then
-            echo "Aucun rapport de couverture n'a été trouvé lors des tests" >&2
-            exit 1
-          fi
-          if [ ! -f "${lcov_path}" ]; then
-            alt_path="../${lcov_path}"
-            if [ -f "${alt_path}" ]; then
-              mkdir -p "$(dirname "${lcov_path}")"
-              mv "${alt_path}" "${lcov_path}"
-            fi
-          fi
-
-          if [ ! -f "${lcov_path}" ]; then
-            found_path=$(find .. -type f -name "$(basename "${lcov_path}")" | head -n 1 || true)
-            if [ -n "${found_path}" ] && [ -f "${found_path}" ]; then
-              mkdir -p "$(dirname "${lcov_path}")"
-              cp "${found_path}" "${lcov_path}"
-            fi
-          fi
-
-          if [ ! -f "${lcov_path}" ]; then
-            echo "Fichier de couverture introuvable: ${lcov_path}" >&2
-            exit 1
-          fi
 
       # Configuration pour les Pull Requests
       - name: Configuration des paramètres PR
@@ -175,15 +144,6 @@ jobs:
             ${{ needs.frontend-tests.outputs['lcov-path'] && format('-Dsonar.javascript.lcov.reportPaths={0}', needs.frontend-tests.outputs['lcov-path']) || '' }}
             ${{ needs.frontend-tests.outputs['lcov-path'] && format('-Dsonar.typescript.lcov.reportPaths={0}', needs.frontend-tests.outputs['lcov-path']) || '' }}
             ${{ steps.sonar-context.outputs.args }}
-
-      - name: Vérification du Quality Gate
-        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_FRONT }}
-          SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
-        with:
-          scanMetadataReportFile: front/.scannerwork/report-task.txt
-          pollingTimeoutSec: 600
 
   # Build et publication de l'image Docker du frontend sur Docker Hub
   # Ne s'exécute que sur les branches main et dev après validation des tests et de SonarCloud

@@ -1,57 +1,42 @@
-# BobApp
+# Repository BobApp CI/CD 
 
-Clone project:
+## Lien du repository GitHub
 
-> git clone XXXXX
+https://github.com/bem92/APP-CI-CD
 
-## Front-end 
+## Workflows GitHub Actions implémentés
 
-Go inside folder the front folder:
+Le repository contient une pipeline CI/CD complète avec :
 
-> cd front
+### 1. Workflow CI/CD
+Pipeline complète qui exécute les tests, vérifie la qualité et déploie sur Docker Hub
 
-Install dependencies:
+### 2. Workflow des tests  
+- Tests backend avec Maven et génération rapport JaCoCo
+- Tests frontend avec Karma et génération rapport LCOV
 
-> npm install
+### 3. Workflow de qualité
+- Analyse SonarCloud pour backend et frontend
+- Vérification du Quality Gate
 
-Launch Front-end:
+## Principe de conditionnement
 
-> npm run start;
+**Chaque étape du workflow doit être validée avec succès avant de passer à la suivante**. Le déploiement sur Docker Hub est réalisé **si et seulement si** toutes les étapes précédentes ont réussi (tests + qualité).
 
-### Docker
+## Images Docker Hub
 
-Build the container:
+Les images Docker validées sont publiées sur :
+- **Backend** : `docker.io/nejrima/projet10:back-latest` (branche main) / `docker.io/nejrima/projet10:back-dev` (branche dev)
+- **Frontend** : `docker.io/nejrima/projet10:front-latest` (branche main) / `docker.io/nejrima/projet10:front-dev` (branche dev)
 
-> docker build -t bobapp-front .  
+## Dashboards SonarCloud
 
-Start the container:
+- Organisation : **bem92**
+- Projet Backend : **back-app**
+- Projet Frontend : **front-app**
 
-> docker run -p 8080:8080 --name bobapp-front -d bobapp-front
+URL : https://sonarcloud.io/organizations/bem92/projects
 
-## Back-end
+## Note importante
 
-Go inside folder the back folder:
-
-> cd back
-
-Install dependencies:
-
-> mvn clean install
-
-Launch Back-end:
-
->  mvn spring-boot:run
-
-Launch the tests:
-
-> mvn clean install
-
-### Docker
-
-Build the container:
-
-> docker build -t bobapp-back .  
-
-Start the container:
-
-> docker run -p 8080:8080 --name bobapp-back -d bobapp-back 
+Le plan gratuit de SonarCloud ne permet pas de créer des Quality Gates personnalisées.

@@ -126,6 +126,15 @@ jobs:
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
             ${{ steps.sonar-context.outputs.args }}
 
+      - name: Vérification du Quality Gate
+        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_BACK }}
+          SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
+        with:
+          scanMetadataReportFile: back/.scannerwork/report-task.txt
+          pollingTimeoutSec: 600
+
   # Build et publication de l'image Docker du backend sur Docker Hub
   # Ne s'exécute que sur les branches main et dev après validation des tests et de SonarCloud
   docker-backend:

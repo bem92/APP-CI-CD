@@ -69,13 +69,7 @@ jobs:
         env:
           CI: 'true'
           NG_CLI_ANALYTICS: 'false'
-        run: |
-          if npm test -- --watch=false --code-coverage --browsers=ChromeHeadless; then
-            echo "Tests Angular OK"
-          else
-            echo "Fallback sur npm test classique"
-            npm test -- --coverage
-          fi
+        run: npm test -- --watch=false --code-coverage --browsers=ChromeHeadlessCI --no-progress
 
       # Localisation du fichier de couverture LCOV pour SonarCloud
       - name: Recherche du rapport de couverture
@@ -86,14 +80,44 @@ jobs:
           else
             lcov=""
           fi
-          echo "lcov=${lcov}" >> "$GITHUB_OUTPUT"
+          if [ -n "$lcov" ]; then
+            # Le chemin du rapport doit être relatif au working directory
+            echo "lcov=${lcov}" >> "$GITHUB_OUTPUT"
+            echo "Rapport LCOV trouvé : ${lcov}"
+          else
+            echo "lcov=" >> "$GITHUB_OUTPUT"
+            echo "Aucun rapport LCOV trouvé"
+          fi
+
+      - name: Affichage de la structure du dossier coverage
+        if: always()
+        run: |
+          echo "=== Contenu du dossier coverage ==="
+          if [ -d coverage ]; then
+            ls -la coverage/
+            find coverage -type f -name "*.info" -o -name "*.xml" | head -10
+          else
+            echo "Le dossier coverage n'existe pas"
+          fi
+
+      - name: Échec si la couverture est absente
+        if: ${{ steps.cov.outputs.lcov == '' }}
+        run: |
+          echo "::error::Aucun rapport lcov.info trouvé dans le dossier coverage" >&2
+          if [ -d coverage ]; then
+            ls -R coverage
+          else
+            ls -a
+          fi
+          exit 1
 
       - name: Sauvegarde des résultats de tests
         uses: actions/upload-artifact@v4
         with:
           name: frontend-artifacts
-          if-no-files-found: ignore
-          path: front/coverage/**
+          if-no-files-found: error
+          path: |
+            front/coverage/**
 
   # Analyse de la qualité du code frontend sur SonarCloud
   # S'exécute uniquement si les tests sont passés et que ce n'est pas un fork
@@ -116,7 +140,35 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frontend-artifacts
-          path: .
+          path: front
+
+      - name: Vérification de la structure du coverage téléchargé
+        run: |
+          echo "=== Vérification de la structure des fichiers ==="
+          if [ -d "front/coverage" ]; then
+            echo "Dossier front/coverage trouvé"
+            ls -la front/coverage/
+            find front/coverage -name "lcov.info" -o -name "*.xml" | head -10
+          else
+            echo "Dossier front/coverage introuvable"
+            find . -name "lcov.info" | head -10
+          fi
+
+      - name: Préparation du chemin de coverage
+        id: coverage-path
+        run: |
+          # Recherche du fichier lcov.info dans la structure téléchargée
+          LCOV_FILE=$(find front -name "lcov.info" -type f | head -n 1)
+          if [ -n "$LCOV_FILE" ]; then
+            # Chemin relatif depuis le projectBaseDir (front)
+            RELATIVE_PATH=${LCOV_FILE#front/}
+            echo "lcov-path=${RELATIVE_PATH}" >> "$GITHUB_OUTPUT"
+            echo "Fichier LCOV trouvé : ${LCOV_FILE}"
+            echo "Chemin relatif : ${RELATIVE_PATH}"
+          else
+            echo "::error::Aucun fichier lcov.info trouvé après téléchargement des artifacts"
+            exit 1
+          fi
 
       # Configuration pour les Pull Requests
       - name: Configuration des paramètres PR
@@ -141,8 +193,9 @@ jobs:
             -Dsonar.sources=src
             -Dsonar.tests=src
             -Dsonar.test.inclusions=**/*.spec.ts,**/*.test.ts
-            ${{ needs.frontend-tests.outputs['lcov-path'] && format('-Dsonar.javascript.lcov.reportPaths={0}', needs.frontend-tests.outputs['lcov-path']) || '' }}
-            ${{ needs.frontend-tests.outputs['lcov-path'] && format('-Dsonar.typescript.lcov.reportPaths={0}', needs.frontend-tests.outputs['lcov-path']) || '' }}
+            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/*.spec.ts,**/*.test.ts
+            -Dsonar.javascript.lcov.reportPaths=${{ steps.coverage-path.outputs.lcov-path }}
+            -Dsonar.typescript.lcov.reportPaths=${{ steps.coverage-path.outputs.lcov-path }}
             ${{ steps.sonar-context.outputs.args }}
 
   # Build et publication de l'image Docker du frontend sur Docker Hub
